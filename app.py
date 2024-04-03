@@ -1,13 +1,6 @@
-# from flask import Flask
-# app = Flask(__name__)
-
-# @app.route("/")
-# def home():
-#     return "Hello, World!"
-
 import torch
 from diffusers import StableDiffusionPipeline
-from flask import Flask
+from flask import Flask, request
 
 # Load the Stable Diffusion model
 model_id = "CompVis/stable-diffusion-v1-4"
@@ -19,13 +12,16 @@ app = Flask(__name__)
 def home():
     return "Stable Diffusion Image Generator"  
 
-@app.route('/generate')
+@app.route('/generate', methods=['POST'])
 def generate_image():
-    prompt = "A vibrant watercolor painting of a majestic lion in the savanna" # Hardcoded prompt 
-    image = pipe(prompt).images[0]
-    image_filename = "generated_image.png"
-    image.save(image_filename)
-    return "Image saved as " + image_filename 
+    prompt = request.form.get('prompt')  # Get the prompt from the request
+    if prompt:
+        image = pipe(prompt).images[0]
+        image_filename = "generated_image.png"
+        image.save(image_filename)
+        return "Image saved as " + image_filename 
+    else:
+        return "Please provide a text prompt."
 
 if __name__ == '__main__':
     app.run(debug=True) 
