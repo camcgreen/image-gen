@@ -1,10 +1,10 @@
+import os
 import torch
-from diffusers import StableDiffusionPipeline
+from diffusers import StableDiffusionXLPipeline
 from flask import Flask, request
 
-# Load the Stable Diffusion model
-model_id = "CompVis/stable-diffusion-v1-4"
-pipe = StableDiffusionPipeline.from_pretrained(model_id, torch_dtype=torch.float16).to("cuda")
+model_id = "stabilityai/stable-diffusion-xl-base-1.0"
+pipe = StableDiffusionXLPipeline.from_pretrained(model_id, torch_dtype=torch.float16).to("cuda")
 
 app = Flask(__name__)
 
@@ -14,12 +14,17 @@ def home():
 
 @app.route('/generate', methods=['POST'])
 def generate_image():
-    prompt = request.form.get('prompt')  # Get the prompt from the request
+    prompt = request.form.get('prompt')
+
     if prompt:
+        documents_path = os.path.join(os.path.expanduser('~'), 'Documents')
+        sd_folder = os.path.join(documents_path, 'sd')
+        os.makedirs(sd_folder, exist_ok=True)  
         image = pipe(prompt).images[0]
         image_filename = "generated_image.png"
-        image.save(image_filename)
-        return "Image saved as " + image_filename 
+        image_path = os.path.join(sd_folder, image_filename)  
+        image.save(image_path)
+        return "Image saved in your Documents folder (inside the 'sd' folder)" 
     else:
         return "Please provide a text prompt."
 
