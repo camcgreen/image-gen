@@ -31,9 +31,8 @@ def generate_image():
         documents_path = os.path.join(os.path.expanduser('~'), 'Documents')
         sd_folder = os.path.join(documents_path, 'sd')
         os.makedirs(sd_folder, exist_ok=True)  
-        image = pipe(prompt).images[0]
         # Ensure using the same inference steps as the loaded model and CFG set to 0.
-        image = pipe(prompt, num_inference_steps=4, guidance_scale=0).images[0]
+        image = pipe(prompt, num_inference_steps=2, guidance_scale=0).images[0]
         image_filename = "generated_image.png"
         image_path = os.path.join(sd_folder, image_filename)  
         image.save(image_path)
