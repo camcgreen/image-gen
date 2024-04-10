@@ -1,3 +1,5 @@
+import base64
+import io
 import os
 
 import torch
@@ -9,6 +11,7 @@ from diffusers import (
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from huggingface_hub import hf_hub_download
+from PIL import Image
 from safetensors.torch import load_file
 
 from face_swapper import face_swapper
@@ -43,40 +46,31 @@ def home():
     return "Stable Diffusion Image Generator"
 
 
-@app.route("/process_image", methods=["POST"])
-def process_image():
-    try:
-        print("req detected")
-        face_image_data = request.json["face_image"]
-        back_image_data = request.json["back_image"]
-        print("images on base64 received")
-        output_image_base64 = swapper_obj.swap_face_from_file(
-            face_image_data, back_image_data
-        )
-        return output_image_base64
-
-    except KeyError:
-        return jsonify({"error": "Invalid request. Missing image field."}), 400
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
 @app.route("/generate", methods=["POST"])
 def generate_image():
     prompt = request.form.get("prompt")
+    face_image_data = request.form.get("face_image")
 
     if prompt:
+        print("starting image gen")
         image = pipe(prompt, num_inference_steps=2, guidance_scale=0).images[0]
-        return "image successfully generated with prompt " + prompt
-        # documents_path = os.path.join(os.path.expanduser('~'), 'Documents')
-        # sd_folder = os.path.join(documents_path, 'sd')
-        # os.makedirs(sd_folder, exist_ok=True)
-        # # Ensure using the same inference steps as the loaded model and CFG set to 0.
-        # image_filename = "generated_image.png"
-        # image_path = os.path.join(sd_folder, image_filename)
-        # image.save(image_path)
-        # return "Image saved in your Documents folder (inside the 'sd' folder)"
+        with io.BytesIO() as output:
+            image.save(output, format="PNG")
+            back_image_data = base64.b64encode(output.getvalue()).decode("ascii")
+
+        try:
+            print("starting face swap")
+            print("req detected")
+            output_image_base64 = swapper_obj.swap_face_from_file(
+                face_image_data, back_image_data
+            )
+            return output_image_base64
+
+        except KeyError:
+            return jsonify({"error": "Invalid request. Missing image field."}), 400
+
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
     else:
         return "Please provide a text prompt."
 
